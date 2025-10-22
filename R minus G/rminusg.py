@@ -2,7 +2,7 @@ from fadfpdata import EcosData, Dummy
 import numpy as np
 import pandaspro as cpd
 
-update_date = '20251017'
+update_date = '20251020'
 excelfile = fr'R minus G/R minus G_{update_date}.xlsx'
 
 ecos = EcosData()
@@ -20,15 +20,24 @@ rminusg['ggxwdg_l'] = rminusg.groupby('ifscode')['ggxwdg'].shift(1)
 rminusg['r'] = np.where(rminusg['ggxwdg_l'] == 0, np.nan, rminusg['ggei'] / rminusg['ggxwdg_l'])
 rminusg['rlessg'] = np.where((1 + rminusg['g']) == 0, np.nan,
                              (rminusg['r'] - rminusg['g']) / (1 + rminusg['g']) * 100)
+rminusg['rlessg_abs'] = (rminusg['r'] - rminusg['g']) * 100
 
-agg = rminusg.agg_mean('rlessg', group_dict=inc_dict).query('year>=2000')
+target_var = 'rlessg_abs'
+
+agg = rminusg.agg_mean(target_var, group_dict=inc_dict).query('year>=2000')
 ps = cpd.PutxlSet(excelfile)
 ps.putxl(agg, sheet_name='chart', cell='B1', index=True)
 
-agg_detail = rminusg.export_agg_detail(
-    indicator='rlessg',
+rminusg.loc[rminusg['ifscode'].isin(dum.ae), 'inc_group'] = 'AE'
+rminusg.loc[rminusg['ifscode'].isin(dum.em), 'inc_group'] = 'EM'
+rminusg.loc[rminusg['ifscode'].isin(dum.lic), 'inc_group'] = 'LIDC'
+rminusg_clean = rminusg.noagg[['ifscode', 'inc_group', 'year', 'ggei', 'ggxwdg', 'ngdp', 'g', 'rlessg_abs', 'rlessg']].query('year>=2000')
+ps.putxl(rminusg_clean, sheet_name='data', cell='A1', index=False)
+
+agg_detail = rminusg.query('year>=2000').export_agg_detail(
+    indicator=target_var,
     group_dict=inc_dict,
-    excel_file=f'R minus G_{update_date}.xlsx',
+    excel_file=excelfile,
     sheet_name='detail',
     start_cell='A2'
 )
