@@ -3,7 +3,7 @@ import pandaspro as cpd
 import pandas as pd
 from fadfpdata import cname_to_ifs
 
-update_date = '20251105'
+update_date = '20251117'
 download = 0
 
 if download == 1:
@@ -32,3 +32,11 @@ monthly_long['ifscode'] = monthly_long['country'].map(cname_to_ifs)
 monthly_long.loc[monthly_long['country']=='Global', 'ifscode'] = 1
 monthly_long = monthly_long[['dates', 'country', 'ifscode', 'embig']]
 monthly_long.to_csv(fr'EMBIG/EMBIG_monthly_{update_date}.csv', index=False)
+
+
+monthly_long['year'] = monthly_long['dates'].dt.year
+monthly_long['month'] = monthly_long['dates'].dt.month
+monthly_long_temp = monthly_long[['ifscode', 'year', 'month', 'embig']]
+monthly_long_temp.to_csv(fr"C:\Users\xli7\OneDrive - International Monetary Fund (PRD)\Balasundharam, Vybhavi's files - FM - Spreads\Data\Cleaned Datasets\EMBIG_monthly_{update_date}.csv", index=False)
+
+
