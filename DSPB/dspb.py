@@ -1,12 +1,12 @@
-from fadfpdata import EcosData, Dummy
+from fadfpdata import iData, Dummy
 import numpy as np
 import pandaspro as cpd
 import pandas as pd
 
-update_date = '20251017'
+update_date = '20260324'
 excelfile = fr'DSPB/DSPB_{update_date}.xlsx'
 
-ecos = EcosData()
+weo = iData()
 dum = Dummy()
 inc_dict = {
     'Global': dum.noagg,
@@ -15,7 +15,7 @@ inc_dict = {
     'Low-Income Developing Countries': dum.lic
 }
 
-dspb = ecos.copy()
+dspb = weo.copy()
 dspb['g'] = dspb.groupby('ifscode')['ngdp'].pct_change()
 dspb['ggxwdg_l'] = dspb.groupby('ifscode')['ggxwdg'].shift(1)
 dspb['ggxwdg_gdp_l'] = dspb.groupby('ifscode')['ggxwdg_gdp'].shift(1)

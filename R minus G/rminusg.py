@@ -1,11 +1,11 @@
-from fadfpdata import EcosData, Dummy
+from fadfpdata import iData, Dummy
 import numpy as np
 import pandaspro as cpd
 
-update_date = '20251020'
+update_date = '20260324'
 excelfile = fr'R minus G/R minus G_{update_date}.xlsx'
 
-ecos = EcosData()
+weo = iData()
 dum = Dummy()
 inc_dict = {
     'Global': dum.noagg,
@@ -14,7 +14,7 @@ inc_dict = {
     'Low-Income Developing Countries': dum.lic
 }
 
-rminusg = ecos[['ifscode', 'year', 'ggei', 'ggxwdg', 'ngdp', 'ggxcnl_gdp', 'ngdp_fy_usd']]
+rminusg = weo[['ifscode', 'year', 'ggei', 'ggxwdg', 'ngdp', 'ggxcnl_gdp', 'ngdp_fy_usd']]
 rminusg['g'] = rminusg.groupby('ifscode')['ngdp'].pct_change()
 rminusg['ggxwdg_l'] = rminusg.groupby('ifscode')['ggxwdg'].shift(1)
 rminusg['r'] = np.where(rminusg['ggxwdg_l'] == 0, np.nan, rminusg['ggei'] / rminusg['ggxwdg_l'])
