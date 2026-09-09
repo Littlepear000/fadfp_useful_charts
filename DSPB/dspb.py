@@ -1,9 +1,9 @@
-from fadfpdata import iData, Dummy
+from fadfpdata import iData, Dummy, ifs_to_cname
 import numpy as np
 import pandaspro as cpd
 import pandas as pd
 
-update_date = '20260324'
+update_date = '20260908'
 excelfile = fr'DSPB/DSPB_{update_date}.xlsx'
 
 weo = iData()
@@ -25,6 +25,10 @@ dspb['rlessg'] = np.where((1 + dspb['g']) == 0, np.nan,
 dspb['dspb'] = dspb['ggxwdg_gdp_l'] * dspb['rlessg'] / 100
 dspb['pb_minus_dspb'] = dspb['ggxonlb_gdp'] - dspb['dspb']
 dspb.loc[dspb['pb_minus_dspb'] <= -10, 'pb_minus_dspb'] = np.nan    #exclude outliers
+
+dspb['country'] = dspb['ifscode'].map(ifs_to_cname)
+dspb = dspb.dropna(subset=['country'])
+dspb = dspb.corder('country')
 
 
 def summarize_pb_stats_by_year(df, inc_dict):
@@ -96,12 +100,12 @@ summary_all = summarize_pb_stats_by_year(dspb, inc_dict)
 summary_1year = summary_all.query('year==2029')
 
 ps = cpd.PutxlSet(excelfile)
-ps.putxl(summary_1year, sheet_name='chart', cell='B1', index=False)
+# ps.putxl(summary_1year, sheet_name='chart', cell='B1', index=False)
 
 dspb.loc[dspb['ifscode'].isin(dum.ae), 'inc_group'] = 'AE'
 dspb.loc[dspb['ifscode'].isin(dum.em), 'inc_group'] = 'EM'
 dspb.loc[dspb['ifscode'].isin(dum.lic), 'inc_group'] = 'LIDC'
-dspb_clean = dspb.noagg[['ifscode', 'inc_group', 'year', 'ggxonlb_gdp', 'dspb', 'pb_minus_dspb']].query('year>=2000')
+dspb_clean = dspb.noagg[['country', 'ifscode', 'inc_group', 'year', 'ggxonlb_gdp', 'dspb', 'pb_minus_dspb']].query('year>=2000')
 ps.putxl(dspb_clean, sheet_name='data', cell='A1', index=False)
 
 check = dspb.inlist('year', 2029).inlist('ifscode', dum.em)
