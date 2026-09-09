@@ -55,13 +55,14 @@ def summarize_pb_stats_by_year(df, inc_dict):
 
             # --- 3. Distribution statistics ---
             sub_neg = sub_y.loc[sub_y['pb_minus_dspb'] < 0]
+            # sub_neg = sub_y.copy()
             if not sub_neg.empty:
                 desc = sub_neg['pb_minus_dspb'].describe(percentiles=[0.25, 0.5, 0.75])
                 q25 = desc['25%']
                 median = desc['50%']
                 q75 = desc['75%']
-                mean = desc['mean']
-                iqr = q25 - q75
+                mean = weighted_avg(sub_neg, 'pb_minus_dspb', weight='ngdp_fy_usd')
+                iqr = q75 - q25
             else:
                 q25 = median = q75 = mean = iqr = np.nan
 
@@ -95,9 +96,14 @@ def summarize_pb_stats_by_year(df, inc_dict):
     result_df = result_df.sort_values(['year', 'group']).reset_index(drop=True)
     return result_df
 
+def weighted_avg(df, col, weight='ngdp_fy_usd'):
+    df = df[[col, weight]].dropna()
+    return (df[col] * df[weight]).sum() / df[weight].sum()
+
 
 summary_all = summarize_pb_stats_by_year(dspb, inc_dict)
-summary_1year = summary_all.query('year==2029')
+# summary_1year = summary_all.query('year==2029')
+dspb_agg = dspb.agg_mean('dspb')
 
 ps = cpd.PutxlSet(excelfile)
 # ps.putxl(summary_1year, sheet_name='chart', cell='B1', index=False)
@@ -105,7 +111,30 @@ ps = cpd.PutxlSet(excelfile)
 dspb.loc[dspb['ifscode'].isin(dum.ae), 'inc_group'] = 'AE'
 dspb.loc[dspb['ifscode'].isin(dum.em), 'inc_group'] = 'EM'
 dspb.loc[dspb['ifscode'].isin(dum.lic), 'inc_group'] = 'LIDC'
-dspb_clean = dspb.noagg[['country', 'ifscode', 'inc_group', 'year', 'ggxonlb_gdp', 'dspb', 'pb_minus_dspb']].query('year>=2000')
-ps.putxl(dspb_clean, sheet_name='data', cell='A1', index=False)
+dspb_clean = dspb.noagg[['country', 'ifscode', 'inc_group', 'year', 'ngdp_fy_usd', 'ggxonlb_gdp', 'dspb', 'pb_minus_dspb']].query('year>=2000')
 
-check = dspb.inlist('year', 2029).inlist('ifscode', dum.em)
+## Group aggregates
+inc_group_map = {
+    'AE': ('Advanced Economies', 110),
+    'EM': ('Emerging Markets', 1201),
+    'LIDC': ('Low-Income Developing Countries', 201)
+}
+agg_cols = ['ggxonlb_gdp', 'dspb', 'pb_minus_dspb']
+dspb_group = (
+    dspb_clean
+    .groupby(['inc_group', 'year'])
+    .apply(lambda g: pd.Series({
+        col: weighted_avg(g, col)
+        for col in agg_cols
+    }))
+    .reset_index()
+)
+dspb_group = dspb_group[dspb_group['inc_group'] != 'na']
+dspb_group[['country', 'ifscode']] = dspb_group['inc_group'].apply(
+    lambda x: pd.Series(inc_group_map[x])
+)
+
+dspb_final = pd.concat([dspb_clean.drop(columns='ngdp_fy_usd'), dspb_group], sort=False)
+ps.putxl(dspb_final, sheet_name='data', cell='A1', index=False)
+
+check = dspb.inlist('year', 2031).inlist('ifscode', dum.em)
